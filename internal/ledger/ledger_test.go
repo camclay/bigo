@@ -70,7 +70,10 @@ func TestLedger_Operations(t *testing.T) {
 	if err := l.UpdateTaskStatus("task-1", "done"); err != nil {
 		t.Fatalf("UpdateTaskStatus failed: %v", err)
 	}
-	got, _ = l.GetTask("task-1")
+	got, err = l.GetTask("task-1")
+	if err != nil {
+		t.Fatalf("GetTask failed: %v", err)
+	}
 	if got.Status != "done" {
 		t.Errorf("Expected status done, got %s", got.Status)
 	}

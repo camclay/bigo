@@ -2,6 +2,10 @@ run:
   timeout: 5m
   modules-download-mode: readonly
 
+output:
+  formats:
+    - format: colored-line-number
+
 linters:
   enable:
     - errcheck
@@ -23,7 +27,8 @@ linters-settings:
     check-blank: true
 
   govet:
-    check-shadowing: true
+    enable:
+      - shadow
 
   gofmt:
     simplify: true
@@ -43,7 +48,7 @@ issues:
         - gosec
 
     # Ignore error return value in defer
-    - text: "Error return value of .((os\\.)?std(out|err)\\..*|.*Close|.*Flush|os\\.Remove(All)?|.*print(f|ln)?|os\\.(Un)?Setenv). is not checked"
+    - text: "Error return value of .((os\\.)?std(out|err)\\.ப்படுகின்றன|.*Close|.*Flush|os\\.Remove(All)?|.*print(f|ln)?|os\\.(Un)?Setenv). is not checked"
       linters:
         - errcheck
 

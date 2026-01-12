@@ -99,7 +99,9 @@ func (c *Conductor) Run(ctx context.Context, title, description string) (*RunRes
 	if err != nil {
 		result.Error = err.Error()
 		result.Status = types.StatusFailed
-		_ = c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed))
+		if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed)); updateErr != nil {
+			fmt.Printf("failed to update task status: %v\n", updateErr)
+		}
 		return result, nil
 	}
 
@@ -109,7 +111,9 @@ func (c *Conductor) Run(ctx context.Context, title, description string) (*RunRes
 	if !execResult.Success {
 		result.Error = execResult.Error
 		result.Status = types.StatusFailed
-		_ = c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed))
+		if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed)); updateErr != nil {
+			fmt.Printf("failed to update task status: %v\n", updateErr)
+		}
 		return result, nil
 	}
 	result.EndTime = time.Now()
@@ -148,14 +152,20 @@ func (c *Conductor) Run(ctx context.Context, title, description string) (*RunRes
 	if execResult.Success {
 		if result.ValidationRequired && result.ValidationPending {
 			result.Status = types.StatusValidating
-			_ = c.ledger.UpdateTaskStatus(task.ID, string(types.StatusValidating))
+			if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusValidating)); updateErr != nil {
+				fmt.Printf("failed to update task status: %v\n", updateErr)
+			}
 		} else {
 			result.Status = types.StatusDone
-			_ = c.ledger.UpdateTaskStatus(task.ID, string(types.StatusDone))
+			if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusDone)); updateErr != nil {
+				fmt.Printf("failed to update task status: %v\n", updateErr)
+			}
 		}
 	} else {
 		result.Status = types.StatusFailed
-		_ = c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed))
+		if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed)); updateErr != nil {
+			fmt.Printf("failed to update task status: %v\n", updateErr)
+		}
 	}
 
 	return result, nil

@@ -16,8 +16,8 @@ import (
 func TestClaudeWorker_CheckQuota(t *testing.T) {
 	// Create a temporary mock script
 	scriptPath := "./mock_claude.sh"
-	
-tests := []struct {
+
+	tests := []struct {
 		name          string
 		scriptContent string
 		expectError   bool

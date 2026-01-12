@@ -69,6 +69,7 @@ func (w *ClaudeWorker) Execute(ctx context.Context, task *types.Task) (*types.Ex
 		"--model", w.model, // Specify model
 	}
 
+	// #nosec G204
 	cmd := exec.CommandContext(ctx, w.cliPath, args...)
 	cmd.Stdin = strings.NewReader(prompt)
 
@@ -120,18 +121,19 @@ func (w *ClaudeWorker) CheckQuota(ctx context.Context) error {
 		"hi",
 	}
 
+	// #nosec G204
 	cmd := exec.CommandContext(ctx, w.cliPath, args...)
 	// We don't care about the output, just the exit code
 	if output, err := cmd.CombinedOutput(); err != nil {
 		outputStr := string(output)
-		                if strings.Contains(strings.ToLower(outputStr), "credit") ||
-		                        strings.Contains(strings.ToLower(outputStr), "quota") ||
-		                        strings.Contains(strings.ToLower(outputStr), "balance") ||
-		                        strings.Contains(strings.ToLower(outputStr), "limit") ||
-		                        strings.Contains(strings.ToLower(outputStr), "exhausted") ||
-		                        strings.Contains(strings.ToLower(outputStr), "payment") {
-		                        return fmt.Errorf("quota exceeded or payment required: %v", err)
-		                }		// Fallback: any error might indicate an issue, but we want to be specific if possible.
+		if strings.Contains(strings.ToLower(outputStr), "credit") ||
+			strings.Contains(strings.ToLower(outputStr), "quota") ||
+			strings.Contains(strings.ToLower(outputStr), "balance") ||
+			strings.Contains(strings.ToLower(outputStr), "limit") ||
+			strings.Contains(strings.ToLower(outputStr), "exhausted") ||
+			strings.Contains(strings.ToLower(outputStr), "payment") {
+			return fmt.Errorf("quota exceeded or payment required: %v", err)
+		} // Fallback: any error might indicate an issue, but we want to be specific if possible.
 		// For now, if a simple "hi" fails, we assume it's unusable.
 		return fmt.Errorf("quota check failed: %v - %s", err, outputStr)
 	}
@@ -151,6 +153,7 @@ func (w *ClaudeWorker) Backend() types.Backend {
 
 // CheckHealth verifies the Claude CLI is available
 func (w *ClaudeWorker) CheckHealth(ctx context.Context) error {
+	// #nosec G204
 	cmd := exec.CommandContext(ctx, w.cliPath, "--version")
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("claude CLI not available: %w", err)

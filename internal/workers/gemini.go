@@ -106,7 +106,7 @@ func (w *GeminiWorker) CheckQuota(ctx context.Context) error {
 	_, err := w.generate(ctx, "hi")
 	if err != nil {
 		errStr := strings.ToLower(err.Error())
-		
+
 		// Handle specific known status codes if they are in the error string
 		if strings.Contains(errStr, "429") {
 			return fmt.Errorf("quota exceeded (Rate Limit): %w", err)
@@ -207,7 +207,11 @@ func (w *GeminiWorker) generate(ctx context.Context, prompt string) (*geminiResp
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("Gemini returned status %d (%s) but failed to read body: %w", resp.StatusCode, resp.Status, err)
+		}
+
 		// Try to parse structured error if available
 		var errorResponse struct {
 			Error struct {
@@ -215,7 +219,10 @@ func (w *GeminiWorker) generate(ctx context.Context, prompt string) (*geminiResp
 				Status  string `json:"status"`
 			} `json:"error"`
 		}
-		_ = json.Unmarshal(bodyBytes, &errorResponse)
+		if err := json.Unmarshal(bodyBytes, &errorResponse); err != nil {
+			// If we can't unmarshal, we'll just use the raw body in the error message
+			return nil, fmt.Errorf("Gemini returned status %d (%s): %s", resp.StatusCode, resp.Status, string(bodyBytes))
+		}
 
 		errMsg := string(bodyBytes)
 		if errorResponse.Error.Message != "" {
@@ -224,7 +231,6 @@ func (w *GeminiWorker) generate(ctx context.Context, prompt string) (*geminiResp
 
 		return nil, fmt.Errorf("Gemini returned status %d (%s): %s", resp.StatusCode, resp.Status, errMsg)
 	}
-
 	var geminiResp geminiResponse
 	if err := json.NewDecoder(resp.Body).Decode(&geminiResp); err != nil {
 		return nil, fmt.Errorf("failed to decode response: %w", err)

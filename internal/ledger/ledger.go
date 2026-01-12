@@ -71,50 +71,44 @@ func (l *Ledger) GetStats() (*Stats, error) {
 	}
 
 	// Pending tasks
-	err = l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status IN ('pending', 'assigned', 'working', 'validating')").Scan(&stats.PendingTasks)
-	if err != nil {
+	if err := l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status IN ('pending', 'assigned', 'working', 'validating')").Scan(&stats.PendingTasks); err != nil {
 		return nil, err
 	}
 
 	// Completed tasks
-	err = l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status = 'done'").Scan(&stats.CompletedTasks)
-	if err != nil {
+	if err := l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status = 'done'").Scan(&stats.CompletedTasks); err != nil {
 		return nil, err
 	}
 
 	// Total executions
-	err = l.db.QueryRow("SELECT COUNT(*) FROM executions").Scan(&stats.TotalExecutions)
-	if err != nil {
+	if err := l.db.QueryRow("SELECT COUNT(*) FROM executions").Scan(&stats.TotalExecutions); err != nil {
 		return nil, err
 	}
 
 	// Claude stats
-	err = l.db.QueryRow(`
+	if err := l.db.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
 		FROM executions
 		WHERE backend LIKE 'claude:%'
-	`).Scan(&stats.ClaudeTasks, &stats.ClaudeCost)
-	if err != nil {
+	`).Scan(&stats.ClaudeTasks, &stats.ClaudeCost); err != nil {
 		return nil, err
 	}
 
 	// Gemini stats
-	err = l.db.QueryRow(`
+	if err := l.db.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
 		FROM executions
 		WHERE backend LIKE 'gemini:%'
-	`).Scan(&stats.GeminiTasks, &stats.GeminiCost)
-	if err != nil {
+	`).Scan(&stats.GeminiTasks, &stats.GeminiCost); err != nil {
 		return nil, err
 	}
 
 	// Ollama stats
-	err = l.db.QueryRow(`
+	if err := l.db.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
 		FROM executions
 		WHERE backend LIKE 'ollama:%'
-	`).Scan(&stats.OllamaTasks, &stats.OllamaCost)
-	if err != nil {
+	`).Scan(&stats.OllamaTasks, &stats.OllamaCost); err != nil {
 		return nil, err
 	}
 
