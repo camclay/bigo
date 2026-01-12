@@ -22,6 +22,8 @@ type Stats struct {
 	TotalExecutions  int
 	ClaudeTasks      int
 	ClaudeCost       float64
+	GeminiTasks      int
+	GeminiCost       float64
 	OllamaTasks      int
 	OllamaCost       float64
 	EstimatedSavings float64
@@ -96,6 +98,16 @@ func (l *Ledger) GetStats() (*Stats, error) {
 		return nil, err
 	}
 
+	// Gemini stats
+	err = l.db.QueryRow(`
+		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
+		FROM executions
+		WHERE backend LIKE 'gemini:%'
+	`).Scan(&stats.GeminiTasks, &stats.GeminiCost)
+	if err != nil {
+		return nil, err
+	}
+
 	// Ollama stats
 	err = l.db.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
@@ -106,11 +118,13 @@ func (l *Ledger) GetStats() (*Stats, error) {
 		return nil, err
 	}
 
-	// Calculate savings (estimate what Claude would have cost)
+	// Calculate savings (estimate what Claude would have cost for all tasks)
 	// Assuming average Claude cost per task of $0.05 for simple tasks
-	stats.EstimatedSavings = float64(stats.OllamaTasks) * 0.05
-	if stats.ClaudeCost+stats.EstimatedSavings > 0 {
-		stats.SavingsPercent = (stats.EstimatedSavings / (stats.ClaudeCost + stats.EstimatedSavings)) * 100
+	nonClaudeTasks := stats.OllamaTasks + stats.GeminiTasks
+	stats.EstimatedSavings = float64(nonClaudeTasks)*0.05 - stats.GeminiCost
+	if stats.ClaudeCost+stats.GeminiCost+stats.EstimatedSavings > 0 {
+		totalEstClaudeCost := stats.ClaudeCost + stats.GeminiCost + stats.EstimatedSavings
+		stats.SavingsPercent = (stats.EstimatedSavings / totalEstClaudeCost) * 100
 	}
 
 	return stats, nil

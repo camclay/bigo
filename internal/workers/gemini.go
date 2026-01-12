@@ -105,12 +105,19 @@ func (w *GeminiWorker) CheckQuota(ctx context.Context) error {
 
 	_, err := w.generate(ctx, "hi")
 	if err != nil {
-		// If we get an error, check if it looks like a quota error
-		// The generate method wraps errors, so we look at the string
 		errStr := strings.ToLower(err.Error())
-		if strings.Contains(errStr, "429") ||
-			strings.Contains(errStr, "quota") ||
-			strings.Contains(errStr, "resource exhausted") {
+		
+		// Handle specific known status codes if they are in the error string
+		if strings.Contains(errStr, "429") {
+			return fmt.Errorf("quota exceeded (Rate Limit): %w", err)
+		}
+		if strings.Contains(errStr, "403") {
+			return fmt.Errorf("quota check failed (Forbidden/API Key issue): %w", err)
+		}
+
+		if strings.Contains(errStr, "quota") ||
+			strings.Contains(errStr, "resource exhausted") ||
+			strings.Contains(errStr, "limit") {
 			return fmt.Errorf("quota exceeded: %w", err)
 		}
 		return fmt.Errorf("quota check failed: %w", err)
@@ -200,11 +207,22 @@ func (w *GeminiWorker) generate(ctx context.Context, prompt string) (*geminiResp
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, err := io.ReadAll(resp.Body)
-		if err != nil {
-			return nil, fmt.Errorf("Gemini returned status %d (failed to read body: %w)", resp.StatusCode, err)
+		bodyBytes, _ := io.ReadAll(resp.Body)
+		// Try to parse structured error if available
+		var errorResponse struct {
+			Error struct {
+				Message string `json:"message"`
+				Status  string `json:"status"`
+			} `json:"error"`
 		}
-		return nil, fmt.Errorf("Gemini returned status %d: %s", resp.StatusCode, string(bodyBytes))
+		_ = json.Unmarshal(bodyBytes, &errorResponse)
+
+		errMsg := string(bodyBytes)
+		if errorResponse.Error.Message != "" {
+			errMsg = errorResponse.Error.Message
+		}
+
+		return nil, fmt.Errorf("Gemini returned status %d (%s): %s", resp.StatusCode, resp.Status, errMsg)
 	}
 
 	var geminiResp geminiResponse

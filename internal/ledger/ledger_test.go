@@ -101,4 +101,10 @@ func TestLedger_Operations(t *testing.T) {
 	if stats.TotalExecutions != 1 {
 		t.Errorf("Expected 1 execution, got %d", stats.TotalExecutions)
 	}
+	if stats.GeminiTasks != 1 {
+		t.Errorf("Expected 1 Gemini task, got %d", stats.GeminiTasks)
+	}
+	if stats.GeminiCost != 0.01 {
+		t.Errorf("Expected Gemini cost 0.01, got %f", stats.GeminiCost)
+	}
 }
