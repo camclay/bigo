@@ -1,5 +1,5 @@
 # Binaries
-bigo
+/bigo
 *.exe
 *.dll
 *.so

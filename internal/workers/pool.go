@@ -12,6 +12,7 @@ type Worker interface {
 	Execute(ctx context.Context, task *types.Task) (*types.ExecutionResult, error)
 	Available() bool
 	Backend() types.Backend
+	CheckQuota(ctx context.Context) error
 }
 
 // Pool manages a collection of workers for a specific backend type

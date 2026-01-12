@@ -86,6 +86,11 @@ func (w *OllamaWorker) Execute(ctx context.Context, task *types.Task) (*types.Ex
 	}, nil
 }
 
+// CheckQuota verifies if the worker has sufficient quota (always true for Ollama)
+func (w *OllamaWorker) CheckQuota(ctx context.Context) error {
+	return nil
+}
+
 // Available returns whether the worker is available
 func (w *OllamaWorker) Available() bool {
 	return w.available
@@ -161,7 +166,10 @@ func (w *OllamaWorker) generate(ctx context.Context, prompt string) (*ollamaResp
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("Ollama returned status %d (failed to read body: %w)", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("Ollama returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 

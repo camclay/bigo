@@ -1,0 +1,139 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - 'feature/**'
+      - 'fix/**'
+      - 'release/**'
+  pull_request:
+    branches:
+      - main
+
+permissions:
+  contents: read
+
+jobs:
+  lint:
+    name: Lint
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Run golangci-lint
+        uses: golangci/golangci-lint-action@v4
+        with:
+          version: latest
+          args: --timeout=5m
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Download dependencies
+        run: go mod download
+
+      - name: Run tests
+        run: go test -v -race -coverprofile=coverage.out ./...
+
+      - name: Upload coverage
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./coverage.out
+          fail_ci_if_error: false
+
+  build:
+    name: Build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        goos: [linux, darwin, windows]
+        goarch: [amd64, arm64]
+        exclude:
+          - goos: windows
+            goarch: arm64
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build
+        env:
+          GOOS: ${{ matrix.goos }}
+          GOARCH: ${{ matrix.goarch }}
+        run: |
+          output="bigo-${{ matrix.goos }}-${{ matrix.goarch }}"
+          if [ "${{ matrix.goos }}" = "windows" ]; then
+            output="${output}.exe"
+          fi
+          go build -ldflags="-s -w" -o "${output}" ./cmd/bigo
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bigo-${{ matrix.goos }}-${{ matrix.goarch }}
+          path: bigo-*
+          retention-days: 7
+
+  integration-test:
+    name: Integration Test
+    runs-on: ubuntu-latest
+    needs: [build]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Build
+        run: go build -o bigo ./cmd/bigo
+
+      - name: Test init command
+        run: |
+          mkdir -p /tmp/test-project
+          cd /tmp/test-project
+          ${{ github.workspace }}/bigo init
+          test -f .bigo/ledger.db
+          test -f .bigo/config.yaml
+
+      - name: Test classify command
+        run: |
+          cd /tmp/test-project
+          ${{ github.workspace }}/bigo classify "fix typo" | grep -q "TRIVIAL"
+          ${{ github.workspace }}/bigo classify "implement auth" | grep -q "CRITICAL"
+
+      - name: Test status command
+        run: |
+          cd /tmp/test-project
+          ${{ github.workspace }}/bigo status | grep -q "Tasks:"
+
+      - name: Test dry-run
+        run: |
+          cd /tmp/test-project
+          ${{ github.workspace }}/bigo run -n "test task" | grep -q "DRY RUN"

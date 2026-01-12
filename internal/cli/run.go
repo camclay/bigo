@@ -52,12 +52,62 @@ func runTask(cmd *cobra.Command, args []string) error {
 
 	ledgerPath := filepath.Join(cwd, ".bigo", "ledger.db")
 	var l *ledger.Ledger
-	if _, err := os.Stat(ledgerPath); err == nil {
+	if _, err = os.Stat(ledgerPath); err == nil {
 		l, err = ledger.Open(ledgerPath)
 		if err != nil {
 			return fmt.Errorf("failed to open ledger: %w", err)
 		}
 		defer l.Close()
+	}
+
+	// Check quotas before initializing
+	ctx := cmd.Context()
+
+	// Check Claude Quota
+	if cfg.Workers.Claude.Enabled {
+		// Use first available model for check
+		var model string
+		for _, m := range cfg.Workers.Claude.Models {
+			model = m
+			break
+		}
+
+		if model != "" {
+			w := workers.NewClaudeWorker("quota-check", workers.ClaudeConfig{
+				Model:   model,
+				Backend: types.BackendClaudeSonnet, // Dummy backend for check
+			})
+			fmt.Printf("Checking Claude quota (%s)...\n", model)
+			if err = w.CheckQuota(ctx); err != nil {
+				fmt.Printf("⚠ Claude quota check failed: %v\n  Disabling Claude backend.\n", err)
+
+				cfg.Workers.Claude.Enabled = false
+			}
+		}
+	}
+
+	// Check Gemini Quota
+	if cfg.Workers.Gemini.Enabled && cfg.Workers.Gemini.APIKey != "" {
+		// Use first available model for check
+		var model string
+		for _, m := range cfg.Workers.Gemini.Models {
+			model = m
+			break
+		}
+
+		if model != "" {
+			w := workers.NewGeminiWorker("quota-check", workers.GeminiConfig{
+				APIKey:  cfg.Workers.Gemini.APIKey,
+				Model:   model,
+				Backend: types.BackendGeminiFlash, // Dummy backend for check
+			})
+			fmt.Printf("Checking Gemini quota (%s)...\n", model)
+			if err = w.CheckQuota(ctx); err != nil {
+				fmt.Printf("⚠ Gemini quota check failed: %v\n  Disabling Gemini backend.\n", err)
+
+				cfg.Workers.Gemini.Enabled = false
+			}
+		}
 	}
 
 	// Create conductor
@@ -139,11 +189,30 @@ func runTask(cmd *cobra.Command, args []string) error {
 		}
 	}
 
+	// Register Gemini workers
+	if cfg.Workers.Gemini.Enabled && cfg.Workers.Gemini.APIKey != "" {
+		for name, model := range cfg.Workers.Gemini.Models {
+			var backend types.Backend
+			switch name {
+			case "pro":
+				backend = types.BackendGeminiPro
+			default:
+				backend = types.BackendGeminiFlash
+			}
+
+			worker := workers.NewGeminiWorker(name, workers.GeminiConfig{
+				APIKey:  cfg.Workers.Gemini.APIKey,
+				Model:   model,
+				Backend: backend,
+			})
+			cond.RegisterWorker(worker)
+		}
+	}
+
 	// Execute the task
 	fmt.Println("Executing...")
 	fmt.Println()
 
-	ctx := cmd.Context()
 	result, err := cond.Run(ctx, task, "")
 	if err != nil {
 		return fmt.Errorf("execution failed: %w", err)

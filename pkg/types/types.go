@@ -40,6 +40,8 @@ const (
 	BackendOllamaFast   Backend = "ollama:fast"
 	BackendOllama       Backend = "ollama:default"
 	BackendOllamaReason Backend = "ollama:reasoning"
+	BackendGeminiFlash  Backend = "gemini:flash"
+	BackendGeminiPro    Backend = "gemini:pro"
 )
 
 // TaskStatus represents the lifecycle state of a task
@@ -72,13 +74,13 @@ type Task struct {
 
 // ClassificationResult holds the output of the task classifier
 type ClassificationResult struct {
-	Tier            Tier
-	Confidence      float64
+	Tier               Tier
+	Confidence         float64
 	RecommendedBackend Backend
-	Reasoning       string
-	Patterns        []string
-	EstimatedLines  int
-	EstimatedFiles  int
+	Reasoning          string
+	Patterns           []string
+	EstimatedLines     int
+	EstimatedFiles     int
 }
 
 // ExecutionResult holds the output of a task execution
@@ -105,10 +107,10 @@ type ValidationResult struct {
 
 // Finding represents an issue found during validation
 type Finding struct {
-	Severity    string // error, warning, info
-	Location    string // file:line or general
-	Message     string
-	Suggestion  string
+	Severity   string // error, warning, info
+	Location   string // file:line or general
+	Message    string
+	Suggestion string
 }
 
 // Message represents a message on the internal bus
@@ -121,9 +123,9 @@ type Message struct {
 
 // TierConfig maps tiers to their execution configuration
 type TierConfig struct {
-	PrimaryBackend   Backend
-	ValidatorBackend Backend
-	ValidatorCount   int
+	PrimaryBackend    Backend
+	ValidatorBackend  Backend
+	ValidatorCount    int
 	RequiredApprovals int
 }
 
@@ -131,33 +133,33 @@ type TierConfig struct {
 func DefaultTierConfigs() map[Tier]TierConfig {
 	return map[Tier]TierConfig{
 		TierTrivial: {
-			PrimaryBackend:   BackendOllamaFast,
-			ValidatorBackend: "",
-			ValidatorCount:   0,
+			PrimaryBackend:    BackendOllamaFast,
+			ValidatorBackend:  "",
+			ValidatorCount:    0,
 			RequiredApprovals: 0,
 		},
 		TierSimple: {
-			PrimaryBackend:   BackendOllama,
-			ValidatorBackend: BackendOllama,
-			ValidatorCount:   1,
+			PrimaryBackend:    BackendOllama,
+			ValidatorBackend:  BackendOllama,
+			ValidatorCount:    1,
 			RequiredApprovals: 1,
 		},
 		TierStandard: {
-			PrimaryBackend:   BackendClaudeSonnet,
-			ValidatorBackend: BackendClaudeSonnet,
-			ValidatorCount:   2,
+			PrimaryBackend:    BackendClaudeSonnet,
+			ValidatorBackend:  BackendClaudeSonnet,
+			ValidatorCount:    2,
 			RequiredApprovals: 2,
 		},
 		TierComplex: {
-			PrimaryBackend:   BackendClaudeSonnet,
-			ValidatorBackend: BackendClaudeSonnet,
-			ValidatorCount:   3,
+			PrimaryBackend:    BackendClaudeSonnet,
+			ValidatorBackend:  BackendClaudeSonnet,
+			ValidatorCount:    3,
 			RequiredApprovals: 2,
 		},
 		TierCritical: {
-			PrimaryBackend:   BackendClaudeOpus,
-			ValidatorBackend: BackendClaudeSonnet,
-			ValidatorCount:   5,
+			PrimaryBackend:    BackendClaudeOpus,
+			ValidatorBackend:  BackendClaudeSonnet,
+			ValidatorCount:    5,
 			RequiredApprovals: 4,
 		},
 	}

@@ -1,0 +1,135 @@
+name: Update Homebrew Tap
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to update (e.g., v1.0.0)'
+        required: true
+
+jobs:
+  update-tap:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout bigo
+        uses: actions/checkout@v4
+
+      - name: Get version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            VERSION="${{ github.event.release.tag_name }}"
+          else
+            VERSION="${{ inputs.version }}"
+          fi
+          # Remove 'v' prefix if present
+          VERSION="${VERSION#v}"
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "tag=v$VERSION" >> $GITHUB_OUTPUT
+
+      - name: Download release assets and compute checksums
+        id: checksums
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          VERSION="${{ steps.version.outputs.tag }}"
+          BASE_URL="https://github.com/${{ github.repository }}/releases/download/${VERSION}"
+
+          # Download binaries
+          curl -sL "${BASE_URL}/bigo-darwin-arm64" -o bigo-darwin-arm64
+          curl -sL "${BASE_URL}/bigo-darwin-amd64" -o bigo-darwin-amd64
+          curl -sL "${BASE_URL}/bigo-linux-arm64" -o bigo-linux-arm64
+          curl -sL "${BASE_URL}/bigo-linux-amd64" -o bigo-linux-amd64
+
+          # Compute SHA256
+          echo "sha_darwin_arm64=$(shasum -a 256 bigo-darwin-arm64 | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "sha_darwin_amd64=$(shasum -a 256 bigo-darwin-amd64 | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "sha_linux_arm64=$(shasum -a 256 bigo-linux-arm64 | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+          echo "sha_linux_amd64=$(shasum -a 256 bigo-linux-amd64 | cut -d' ' -f1)" >> $GITHUB_OUTPUT
+
+      - name: Generate formula
+        run: |
+          VERSION="${{ steps.version.outputs.version }}"
+          TAG="${{ steps.version.outputs.tag }}"
+
+          cat > bigo.rb << 'FORMULA'
+          class Bigo < Formula
+            desc "Unified Claude + Ollama Agent Orchestrator"
+            homepage "https://github.com/${{ github.repository }}"
+            version "$VERSION"
+            license "MIT"
+
+            on_macos do
+              if Hardware::CPU.arm?
+                url "https://github.com/${{ github.repository }}/releases/download/$TAG/bigo-darwin-arm64"
+                sha256 "$SHA_DARWIN_ARM64"
+              else
+                url "https://github.com/${{ github.repository }}/releases/download/$TAG/bigo-darwin-amd64"
+                sha256 "$SHA_DARWIN_AMD64"
+              end
+            end
+
+            on_linux do
+              if Hardware::CPU.arm?
+                url "https://github.com/${{ github.repository }}/releases/download/$TAG/bigo-linux-arm64"
+                sha256 "$SHA_LINUX_ARM64"
+              else
+                url "https://github.com/${{ github.repository }}/releases/download/$TAG/bigo-linux-amd64"
+                sha256 "$SHA_LINUX_AMD64"
+              end
+            end
+
+            def install
+              if OS.mac?
+                if Hardware::CPU.arm?
+                  bin.install "bigo-darwin-arm64" => "bigo"
+                else
+                  bin.install "bigo-darwin-amd64" => "bigo"
+                end
+              else
+                if Hardware::CPU.arm?
+                  bin.install "bigo-linux-arm64" => "bigo"
+                else
+                  bin.install "bigo-linux-amd64" => "bigo"
+                end
+              end
+            end
+
+            test do
+              assert_match "BigO", shell_output("#{bin}/bigo --version")
+            end
+          end
+          FORMULA
+
+          # Replace placeholders
+          sed -i "s/\$VERSION/$VERSION/g" bigo.rb
+          sed -i "s/\$TAG/$TAG/g" bigo.rb
+          sed -i "s/\$SHA_DARWIN_ARM64/${{ steps.checksums.outputs.sha_darwin_arm64 }}/g" bigo.rb
+          sed -i "s/\$SHA_DARWIN_AMD64/${{ steps.checksums.outputs.sha_darwin_amd64 }}/g" bigo.rb
+          sed -i "s/\$SHA_LINUX_ARM64/${{ steps.checksums.outputs.sha_linux_arm64 }}/g" bigo.rb
+          sed -i "s/\$SHA_LINUX_AMD64/${{ steps.checksums.outputs.sha_linux_amd64 }}/g" bigo.rb
+
+          cat bigo.rb
+
+      - name: Checkout homebrew-tap
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ github.repository_owner }}/homebrew-tap
+          token: ${{ secrets.TAP_GITHUB_TOKEN }}
+          path: homebrew-tap
+
+      - name: Update formula in tap
+        run: |
+          mkdir -p homebrew-tap/Formula
+          cp bigo.rb homebrew-tap/Formula/bigo.rb
+
+      - name: Commit and push
+        run: |
+          cd homebrew-tap
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add Formula/bigo.rb
+          git diff --staged --quiet || git commit -m "Update bigo to ${{ steps.version.outputs.tag }}"
+          git push

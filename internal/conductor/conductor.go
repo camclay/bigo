@@ -25,6 +25,7 @@ type Worker interface {
 	Execute(ctx context.Context, task *types.Task) (*types.ExecutionResult, error)
 	Available() bool
 	Backend() types.Backend
+	CheckQuota(ctx context.Context) error
 }
 
 // NewConductor creates a new conductor instance
@@ -98,7 +99,9 @@ func (c *Conductor) Run(ctx context.Context, title, description string) (*RunRes
 	if err != nil {
 		result.Error = err.Error()
 		result.Status = types.StatusFailed
-		c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed))
+		if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed)); updateErr != nil {
+			fmt.Printf("failed to update task status: %v\n", updateErr)
+		}
 		return result, nil
 	}
 
@@ -108,7 +111,9 @@ func (c *Conductor) Run(ctx context.Context, title, description string) (*RunRes
 	if !execResult.Success {
 		result.Error = execResult.Error
 		result.Status = types.StatusFailed
-		c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed))
+		if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed)); updateErr != nil {
+			fmt.Printf("failed to update task status: %v\n", updateErr)
+		}
 		return result, nil
 	}
 	result.EndTime = time.Now()
@@ -147,14 +152,20 @@ func (c *Conductor) Run(ctx context.Context, title, description string) (*RunRes
 	if execResult.Success {
 		if result.ValidationRequired && result.ValidationPending {
 			result.Status = types.StatusValidating
-			c.ledger.UpdateTaskStatus(task.ID, string(types.StatusValidating))
+			if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusValidating)); updateErr != nil {
+				fmt.Printf("failed to update task status: %v\n", updateErr)
+			}
 		} else {
 			result.Status = types.StatusDone
-			c.ledger.UpdateTaskStatus(task.ID, string(types.StatusDone))
+			if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusDone)); updateErr != nil {
+				fmt.Printf("failed to update task status: %v\n", updateErr)
+			}
 		}
 	} else {
 		result.Status = types.StatusFailed
-		c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed))
+		if updateErr := c.ledger.UpdateTaskStatus(task.ID, string(types.StatusFailed)); updateErr != nil {
+			fmt.Printf("failed to update task status: %v\n", updateErr)
+		}
 	}
 
 	return result, nil
@@ -176,12 +187,12 @@ func (c *Conductor) DryRun(title, description string) *RunResult {
 	}
 
 	return &RunResult{
-		Classification:    classification,
-		ActualBackend:     classification.RecommendedBackend,
-		FallbackBackend:   fallbackBackend,
-		WorkerAvailable:   workerAvailable,
+		Classification:     classification,
+		ActualBackend:      classification.RecommendedBackend,
+		FallbackBackend:    fallbackBackend,
+		WorkerAvailable:    workerAvailable,
 		ValidationRequired: types.DefaultTierConfigs()[classification.Tier].ValidatorCount > 0,
-		DryRun:            true,
+		DryRun:             true,
 	}
 }
 
@@ -242,6 +253,8 @@ type RunResult struct {
 
 func generateID() string {
 	b := make([]byte, 4)
-	rand.Read(b)
+	if _, err := rand.Read(b); err != nil {
+		return fmt.Sprintf("%d", time.Now().UnixNano())
+	}
 	return hex.EncodeToString(b)
 }

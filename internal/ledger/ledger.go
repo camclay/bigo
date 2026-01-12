@@ -16,16 +16,18 @@ type Ledger struct {
 
 // Stats holds aggregated statistics from the ledger
 type Stats struct {
-	TotalTasks        int
-	PendingTasks      int
-	CompletedTasks    int
-	TotalExecutions   int
-	ClaudeTasks       int
-	ClaudeCost        float64
-	OllamaTasks       int
-	OllamaCost        float64
-	EstimatedSavings  float64
-	SavingsPercent    float64
+	TotalTasks       int
+	PendingTasks     int
+	CompletedTasks   int
+	TotalExecutions  int
+	ClaudeTasks      int
+	ClaudeCost       float64
+	GeminiTasks      int
+	GeminiCost       float64
+	OllamaTasks      int
+	OllamaCost       float64
+	EstimatedSavings float64
+	SavingsPercent   float64
 }
 
 // Init creates a new ledger database with the schema
@@ -69,48 +71,54 @@ func (l *Ledger) GetStats() (*Stats, error) {
 	}
 
 	// Pending tasks
-	err = l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status IN ('pending', 'assigned', 'working', 'validating')").Scan(&stats.PendingTasks)
-	if err != nil {
+	if err := l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status IN ('pending', 'assigned', 'working', 'validating')").Scan(&stats.PendingTasks); err != nil {
 		return nil, err
 	}
 
 	// Completed tasks
-	err = l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status = 'done'").Scan(&stats.CompletedTasks)
-	if err != nil {
+	if err := l.db.QueryRow("SELECT COUNT(*) FROM tasks WHERE status = 'done'").Scan(&stats.CompletedTasks); err != nil {
 		return nil, err
 	}
 
 	// Total executions
-	err = l.db.QueryRow("SELECT COUNT(*) FROM executions").Scan(&stats.TotalExecutions)
-	if err != nil {
+	if err := l.db.QueryRow("SELECT COUNT(*) FROM executions").Scan(&stats.TotalExecutions); err != nil {
 		return nil, err
 	}
 
 	// Claude stats
-	err = l.db.QueryRow(`
+	if err := l.db.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
 		FROM executions
 		WHERE backend LIKE 'claude:%'
-	`).Scan(&stats.ClaudeTasks, &stats.ClaudeCost)
-	if err != nil {
+	`).Scan(&stats.ClaudeTasks, &stats.ClaudeCost); err != nil {
+		return nil, err
+	}
+
+	// Gemini stats
+	if err := l.db.QueryRow(`
+		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
+		FROM executions
+		WHERE backend LIKE 'gemini:%'
+	`).Scan(&stats.GeminiTasks, &stats.GeminiCost); err != nil {
 		return nil, err
 	}
 
 	// Ollama stats
-	err = l.db.QueryRow(`
+	if err := l.db.QueryRow(`
 		SELECT COUNT(*), COALESCE(SUM(cost_usd), 0)
 		FROM executions
 		WHERE backend LIKE 'ollama:%'
-	`).Scan(&stats.OllamaTasks, &stats.OllamaCost)
-	if err != nil {
+	`).Scan(&stats.OllamaTasks, &stats.OllamaCost); err != nil {
 		return nil, err
 	}
 
-	// Calculate savings (estimate what Claude would have cost)
+	// Calculate savings (estimate what Claude would have cost for all tasks)
 	// Assuming average Claude cost per task of $0.05 for simple tasks
-	stats.EstimatedSavings = float64(stats.OllamaTasks) * 0.05
-	if stats.ClaudeCost+stats.EstimatedSavings > 0 {
-		stats.SavingsPercent = (stats.EstimatedSavings / (stats.ClaudeCost + stats.EstimatedSavings)) * 100
+	nonClaudeTasks := stats.OllamaTasks + stats.GeminiTasks
+	stats.EstimatedSavings = float64(nonClaudeTasks)*0.05 - stats.GeminiCost
+	if stats.ClaudeCost+stats.GeminiCost+stats.EstimatedSavings > 0 {
+		totalEstClaudeCost := stats.ClaudeCost + stats.GeminiCost + stats.EstimatedSavings
+		stats.SavingsPercent = (stats.EstimatedSavings / totalEstClaudeCost) * 100
 	}
 
 	return stats, nil

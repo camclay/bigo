@@ -23,7 +23,7 @@ func runStatus(cmd *cobra.Command, args []string) error {
 	}
 
 	ledgerPath := filepath.Join(cwd, ".bigo", "ledger.db")
-	if _, err := os.Stat(ledgerPath); os.IsNotExist(err) {
+	if _, statErr := os.Stat(ledgerPath); os.IsNotExist(statErr) {
 		return fmt.Errorf("BigO not initialized. Run 'bigo init' first")
 	}
 
