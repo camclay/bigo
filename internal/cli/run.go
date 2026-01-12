@@ -77,10 +77,10 @@ func runTask(cmd *cobra.Command, args []string) error {
 				Model:   model,
 				Backend: types.BackendClaudeSonnet, // Dummy backend for check
 			})
-							fmt.Printf("Checking Claude quota (%s)...\n", model)
-							if err = w.CheckQuota(ctx); err != nil {
-								fmt.Printf("⚠ Claude quota check failed: %v\n  Disabling Claude backend.\n", err)
-			
+			fmt.Printf("Checking Claude quota (%s)...\n", model)
+			if err = w.CheckQuota(ctx); err != nil {
+				fmt.Printf("⚠ Claude quota check failed: %v\n  Disabling Claude backend.\n", err)
+
 				cfg.Workers.Claude.Enabled = false
 			}
 		}
@@ -101,10 +101,10 @@ func runTask(cmd *cobra.Command, args []string) error {
 				Model:   model,
 				Backend: types.BackendGeminiFlash, // Dummy backend for check
 			})
-							fmt.Printf("Checking Gemini quota (%s)...\n", model)
-							if err = w.CheckQuota(ctx); err != nil {
-								fmt.Printf("⚠ Gemini quota check failed: %v\n  Disabling Gemini backend.\n", err)
-			
+			fmt.Printf("Checking Gemini quota (%s)...\n", model)
+			if err = w.CheckQuota(ctx); err != nil {
+				fmt.Printf("⚠ Gemini quota check failed: %v\n  Disabling Gemini backend.\n", err)
+
 				cfg.Workers.Gemini.Enabled = false
 			}
 		}
