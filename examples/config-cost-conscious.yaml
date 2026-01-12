@@ -1,0 +1,48 @@
+# Example: Cost-Conscious Configuration
+#
+# Minimizes Claude API spend by:
+# - Using Haiku instead of Sonnet for standard tasks
+# - Setting strict cost limits
+# - Preferring Ollama for validation
+#
+# Good for projects with tight budgets.
+
+conductor:
+  classifier_model: claude:haiku  # Cheaper classifier
+  max_retries: 2  # Fewer retries = less cost
+  validation_timeout: 180s
+
+workers:
+  claude:
+    enabled: true
+    max_concurrent: 1
+    models:
+      opus: claude-opus-4-5-20251101
+      sonnet: claude-sonnet-4-20250514
+      haiku: claude-haiku-3-5-20241022
+    cost_limits:
+      daily_usd: 10.0   # Strict daily limit
+      per_task_usd: 1.0 # Warn on expensive tasks
+
+  ollama:
+    enabled: true
+    endpoint: http://gpu-server.local:11434
+    max_concurrent: 6  # More Ollama to offset less Claude
+    models:
+      fast: phi3:mini-16k
+      default: qwen3:8b
+      reasoning: qwen3:8b-8k
+
+validators:
+  pool_size: 3
+  timeout: 90s
+  backends:
+    # Prefer Ollama for validation (free)
+    - ollama:qwen3:8b
+    - ollama:qwen3:8b
+
+ledger:
+  path: .bigo/ledger.db
+
+bus:
+  buffer_size: 500

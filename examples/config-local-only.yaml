@@ -1,0 +1,48 @@
+# Example: Local-Only Configuration
+#
+# Use this when running Ollama locally on the same machine.
+# Good for laptops with GPUs or for development/testing.
+#
+# Setup:
+#   1. Install Ollama locally: curl -fsSL https://ollama.ai/install.sh | sh
+#   2. Pull models: ollama pull phi3:mini
+#   3. Start Ollama: ollama serve
+
+conductor:
+  classifier_model: claude:sonnet
+  max_retries: 3
+  validation_timeout: 300s
+
+workers:
+  claude:
+    enabled: true
+    max_concurrent: 1  # Lower for local machine
+    models:
+      opus: claude-opus-4-5-20251101
+      sonnet: claude-sonnet-4-20250514
+      haiku: claude-haiku-3-5-20241022
+    cost_limits:
+      daily_usd: 20.0
+      per_task_usd: 2.0
+
+  ollama:
+    enabled: true
+    endpoint: http://localhost:11434  # Local Ollama
+    max_concurrent: 2  # Lower for local resources
+    models:
+      # Use smaller models for local execution
+      fast: phi3:mini
+      default: phi3:mini-16k
+      reasoning: qwen3:8b
+
+validators:
+  pool_size: 3
+  timeout: 60s
+  backends:
+    - ollama:phi3:mini
+
+ledger:
+  path: .bigo/ledger.db
+
+bus:
+  buffer_size: 500

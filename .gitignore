@@ -1,0 +1,41 @@
+# Binaries
+bigo
+*.exe
+*.dll
+*.so
+*.dylib
+
+# Build output
+/bin/
+/dist/
+
+# Test binary
+*.test
+
+# Coverage
+*.out
+coverage.html
+
+# Go workspace
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# BigO local data (user-specific)
+.bigo/
+
+# Logs
+*.log
+
+# Environment
+.env
+.env.local

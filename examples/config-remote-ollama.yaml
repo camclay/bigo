@@ -1,0 +1,53 @@
+# Example: Remote Ollama Server Configuration
+#
+# Use this when you have a dedicated GPU server running Ollama
+# and want to offload inference from your primary machine.
+#
+# Setup:
+#   1. Install Ollama on your GPU server
+#   2. Configure Ollama to listen on 0.0.0.0
+#   3. Pull required models on the server
+#   4. Update the endpoint below
+
+conductor:
+  classifier_model: claude:sonnet
+  max_retries: 3
+  validation_timeout: 300s
+
+workers:
+  claude:
+    enabled: true
+    max_concurrent: 2
+    models:
+      opus: claude-opus-4-5-20251101
+      sonnet: claude-sonnet-4-20250514
+      haiku: claude-haiku-3-5-20241022
+    cost_limits:
+      daily_usd: 50.0
+      per_task_usd: 5.0
+
+  ollama:
+    enabled: true
+    # ↓ Replace with your GPU server hostname/IP
+    endpoint: http://gpu-server.local:11434
+    max_concurrent: 4
+    models:
+      # Small, fast model for trivial tasks
+      fast: phi3:mini-16k
+      # Medium model for simple tasks
+      default: qwen3:8b
+      # Larger context for reasoning
+      reasoning: qwen3:8b-8k
+
+validators:
+  pool_size: 5
+  timeout: 120s
+  backends:
+    - claude:sonnet
+    - ollama:qwen3:8b
+
+ledger:
+  path: .bigo/ledger.db
+
+bus:
+  buffer_size: 1000
