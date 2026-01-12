@@ -124,13 +124,14 @@ func (w *ClaudeWorker) CheckQuota(ctx context.Context) error {
 	// We don't care about the output, just the exit code
 	if output, err := cmd.CombinedOutput(); err != nil {
 		outputStr := string(output)
-		if strings.Contains(strings.ToLower(outputStr), "credit") ||
-			strings.Contains(strings.ToLower(outputStr), "quota") ||
-			strings.Contains(strings.ToLower(outputStr), "balance") ||
-			strings.Contains(strings.ToLower(outputStr), "payment") {
-			return fmt.Errorf("quota exceeded or payment required: %v", err)
-		}
-		// Fallback: any error might indicate an issue, but we want to be specific if possible.
+		                if strings.Contains(strings.ToLower(outputStr), "credit") ||
+		                        strings.Contains(strings.ToLower(outputStr), "quota") ||
+		                        strings.Contains(strings.ToLower(outputStr), "balance") ||
+		                        strings.Contains(strings.ToLower(outputStr), "limit") ||
+		                        strings.Contains(strings.ToLower(outputStr), "exhausted") ||
+		                        strings.Contains(strings.ToLower(outputStr), "payment") {
+		                        return fmt.Errorf("quota exceeded or payment required: %v", err)
+		                }		// Fallback: any error might indicate an issue, but we want to be specific if possible.
 		// For now, if a simple "hi" fails, we assume it's unusable.
 		return fmt.Errorf("quota check failed: %v - %s", err, outputStr)
 	}
