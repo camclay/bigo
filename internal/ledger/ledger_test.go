@@ -53,8 +53,8 @@ func TestLedger_Operations(t *testing.T) {
 		Status:        "pending",
 		WorkerBackend: "gemini:pro",
 	}
-	if err := l.CreateTask(task); err != nil {
-		t.Fatalf("CreateTask failed: %v", err)
+	if createErr := l.CreateTask(task); createErr != nil {
+		t.Fatalf("CreateTask failed: %v", createErr)
 	}
 
 	// Get Task
@@ -67,8 +67,8 @@ func TestLedger_Operations(t *testing.T) {
 	}
 
 	// Update Status
-	if err := l.UpdateTaskStatus("task-1", "done"); err != nil {
-		t.Fatalf("UpdateTaskStatus failed: %v", err)
+	if updateErr := l.UpdateTaskStatus("task-1", "done"); updateErr != nil {
+		t.Fatalf("UpdateTaskStatus failed: %v", updateErr)
 	}
 	got, err = l.GetTask("task-1")
 	if err != nil {
@@ -86,8 +86,8 @@ func TestLedger_Operations(t *testing.T) {
 		TokensUsed: 100,
 		CostUSD:    0.01,
 	}
-	if err := l.CreateExecution(exec); err != nil {
-		t.Fatalf("CreateExecution failed: %v", err)
+	if execErr := l.CreateExecution(exec); execErr != nil {
+		t.Fatalf("CreateExecution failed: %v", execErr)
 	}
 
 	// Check Stats

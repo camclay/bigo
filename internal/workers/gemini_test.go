@@ -38,7 +38,10 @@ func TestGeminiWorker_Execute(t *testing.T) {
 			TotalTokenCount: 123,
 		},
 	}
-	respBody, _ := json.Marshal(mockResp)
+	respBody, err := json.Marshal(mockResp)
+	if err != nil {
+		t.Fatalf("Failed to marshal mock response: %v", err)
+	}
 
 	// Setup worker
 	cfg := GeminiConfig{
