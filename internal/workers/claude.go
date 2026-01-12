@@ -107,6 +107,37 @@ func (w *ClaudeWorker) Execute(ctx context.Context, task *types.Task) (*types.Ex
 	}, nil
 }
 
+// CheckQuota verifies if the worker has sufficient quota
+func (w *ClaudeWorker) CheckQuota(ctx context.Context) error {
+	// Try a minimal execution to check if we can access the API
+	ctx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
+
+	// "hi" is a minimal prompt to check connectivity and quota
+	args := []string{
+		"--print",
+		"--model", w.model,
+		"hi",
+	}
+
+	cmd := exec.CommandContext(ctx, w.cliPath, args...)
+	// We don't care about the output, just the exit code
+	if output, err := cmd.CombinedOutput(); err != nil {
+		outputStr := string(output)
+		if strings.Contains(strings.ToLower(outputStr), "credit") || 
+		   strings.Contains(strings.ToLower(outputStr), "quota") || 
+		   strings.Contains(strings.ToLower(outputStr), "balance") ||
+		   strings.Contains(strings.ToLower(outputStr), "payment") {
+			return fmt.Errorf("quota exceeded or payment required: %v", err)
+		}
+		// Fallback: any error might indicate an issue, but we want to be specific if possible.
+		// For now, if a simple "hi" fails, we assume it's unusable.
+		return fmt.Errorf("quota check failed: %v - %s", err, outputStr)
+	}
+	
+	return nil
+}
+
 // Available returns whether the worker is available
 func (w *ClaudeWorker) Available() bool {
 	return w.available

@@ -27,6 +27,7 @@ type ConductorConfig struct {
 type WorkersConfig struct {
 	Claude ClaudeConfig `yaml:"claude"`
 	Ollama OllamaConfig `yaml:"ollama"`
+	Gemini GeminiConfig `yaml:"gemini"`
 }
 
 // ClaudeConfig configures the Claude backend
@@ -50,6 +51,14 @@ type OllamaConfig struct {
 	MaxConcurrent int               `yaml:"max_concurrent"`
 	Models        map[string]string `yaml:"models"`
 	OpenCodePath  string            `yaml:"opencode_path"`
+}
+
+// GeminiConfig configures the Gemini backend
+type GeminiConfig struct {
+	Enabled       bool              `yaml:"enabled"`
+	APIKey        string            `yaml:"api_key"`
+	MaxConcurrent int               `yaml:"max_concurrent"`
+	Models        map[string]string `yaml:"models"`
 }
 
 // ValidatorsConfig configures the validation system
@@ -101,6 +110,15 @@ func Default() *Config {
 					"reasoning": "qwen3:8b-8k",
 				},
 				OpenCodePath: "opencode",
+			},
+			Gemini: GeminiConfig{
+				Enabled:       true,
+				APIKey:        "", // User must provide
+				MaxConcurrent: 4,
+				Models: map[string]string{
+					"flash": "gemini-1.5-flash",
+					"pro":   "gemini-1.5-pro",
+				},
 			},
 		},
 		Validators: ValidatorsConfig{

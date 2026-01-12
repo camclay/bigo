@@ -1,0 +1,43 @@
+conductor:
+  classifier_model: gemini:flash
+  max_retries: 3
+  validation_timeout: 300s
+
+workers:
+  claude:
+    enabled: false
+    max_concurrent: 2
+    models:
+      opus: claude-opus-4-5-20251101
+      sonnet: claude-sonnet-4-20250514
+      haiku: claude-haiku-3-5-20241022
+    cost_limits:
+      daily_usd: 50.0
+      per_task_usd: 5.0
+
+  ollama:
+    enabled: false
+    endpoint: http://localhost:11434
+    max_concurrent: 4
+    models:
+      fast: phi3:mini-16k
+      default: qwen3:8b
+      reasoning: qwen3:8b-8k
+
+  gemini:
+    enabled: true
+    api_key: ${GEMINI_API_KEY} # Replace with your API key
+    max_concurrent: 10
+    models:
+      flash: gemini-1.5-flash
+      pro: gemini-1.5-pro
+
+validators:
+  pool_size: 5
+  timeout: 120s
+  backends:
+    - gemini:flash
+    - gemini:pro
+
+ledger:
+  path: .bigo/ledger.db

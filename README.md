@@ -42,16 +42,41 @@ BigO intelligently routes coding tasks to the most cost-effective AI backend. Si
 
 ### Installation
 
+#### Homebrew (macOS/Linux)
+
 ```bash
-# Clone the repository
+brew tap yourusername/tap
+brew install bigo
+```
+
+#### Download Binary
+
+Download from [Releases](https://github.com/yourusername/bigo/releases):
+
+```bash
+# macOS (Apple Silicon)
+curl -LO https://github.com/yourusername/bigo/releases/latest/download/bigo-darwin-arm64
+chmod +x bigo-darwin-arm64
+sudo mv bigo-darwin-arm64 /usr/local/bin/bigo
+
+# macOS (Intel)
+curl -LO https://github.com/yourusername/bigo/releases/latest/download/bigo-darwin-amd64
+chmod +x bigo-darwin-amd64
+sudo mv bigo-darwin-amd64 /usr/local/bin/bigo
+
+# Linux (amd64)
+curl -LO https://github.com/yourusername/bigo/releases/latest/download/bigo-linux-amd64
+chmod +x bigo-linux-amd64
+sudo mv bigo-linux-amd64 /usr/local/bin/bigo
+```
+
+#### Build from Source
+
+```bash
 git clone https://github.com/yourusername/bigo.git
 cd bigo
-
-# Build
 go build ./cmd/bigo
-
-# Optional: Install globally
-go install ./cmd/bigo
+sudo mv bigo /usr/local/bin/
 ```
 
 ### Initialize a Project

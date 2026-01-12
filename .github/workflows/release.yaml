@@ -1,0 +1,164 @@
+name: Release
+
+on:
+  pull_request:
+    types:
+      - closed
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release (e.g., v1.0.0)'
+        required: true
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  # Only run if PR was merged (not just closed)
+  check-merge:
+    if: github.event_name == 'workflow_dispatch' || github.event.pull_request.merged == true
+    runs-on: ubuntu-latest
+    outputs:
+      should_release: ${{ steps.check.outputs.should_release }}
+      version: ${{ steps.version.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Check if release needed
+        id: check
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          elif [[ "${{ github.event.pull_request.title }}" == *"release"* ]] || \
+               [[ "${{ github.event.pull_request.head.ref }}" == release/* ]]; then
+            echo "should_release=true" >> $GITHUB_OUTPUT
+          else
+            echo "should_release=false" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Determine version
+        id: version
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "version=${{ inputs.version }}" >> $GITHUB_OUTPUT
+          else
+            # Extract version from PR title or branch name
+            # Expected format: "release: v1.0.0" or branch "release/v1.0.0"
+            PR_TITLE="${{ github.event.pull_request.title }}"
+            BRANCH="${{ github.event.pull_request.head.ref }}"
+
+            if [[ "$PR_TITLE" =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              VERSION="${BASH_REMATCH[0]}"
+            elif [[ "$BRANCH" =~ v[0-9]+\.[0-9]+\.[0-9]+ ]]; then
+              VERSION="${BASH_REMATCH[0]}"
+            else
+              # Auto-increment patch version from latest tag
+              LATEST=$(git describe --tags --abbrev=0 2>/dev/null || echo "v0.0.0")
+              VERSION=$(echo $LATEST | awk -F. '{print $1"."$2"."$3+1}')
+            fi
+            echo "version=$VERSION" >> $GITHUB_OUTPUT
+          fi
+
+  release:
+    needs: check-merge
+    if: needs.check-merge.outputs.should_release == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: '1.22'
+          cache: true
+
+      - name: Run tests
+        run: go test ./...
+
+      - name: Build binaries
+        run: |
+          VERSION="${{ needs.check-merge.outputs.version }}"
+          LDFLAGS="-s -w -X main.version=${VERSION}"
+
+          # Linux amd64
+          GOOS=linux GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/bigo-linux-amd64 ./cmd/bigo
+
+          # Linux arm64
+          GOOS=linux GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o dist/bigo-linux-arm64 ./cmd/bigo
+
+          # macOS amd64
+          GOOS=darwin GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/bigo-darwin-amd64 ./cmd/bigo
+
+          # macOS arm64 (Apple Silicon)
+          GOOS=darwin GOARCH=arm64 go build -ldflags="${LDFLAGS}" -o dist/bigo-darwin-arm64 ./cmd/bigo
+
+          # Windows amd64
+          GOOS=windows GOARCH=amd64 go build -ldflags="${LDFLAGS}" -o dist/bigo-windows-amd64.exe ./cmd/bigo
+
+      - name: Create checksums
+        run: |
+          cd dist
+          sha256sum * > checksums.txt
+          cat checksums.txt
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          VERSION="${{ needs.check-merge.outputs.version }}"
+          PREV_TAG=$(git describe --tags --abbrev=0 2>/dev/null || echo "")
+
+          echo "## What's Changed" > CHANGELOG.md
+          echo "" >> CHANGELOG.md
+
+          if [ -n "$PREV_TAG" ]; then
+            git log ${PREV_TAG}..HEAD --pretty=format:"- %s (%h)" >> CHANGELOG.md
+          else
+            git log --pretty=format:"- %s (%h)" -20 >> CHANGELOG.md
+          fi
+
+          echo "" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo "## Installation" >> CHANGELOG.md
+          echo "" >> CHANGELOG.md
+          echo '```bash' >> CHANGELOG.md
+          echo "# Download for your platform" >> CHANGELOG.md
+          echo "curl -LO https://github.com/${{ github.repository }}/releases/download/${VERSION}/bigo-linux-amd64" >> CHANGELOG.md
+          echo "chmod +x bigo-linux-amd64" >> CHANGELOG.md
+          echo "sudo mv bigo-linux-amd64 /usr/local/bin/bigo" >> CHANGELOG.md
+          echo '```' >> CHANGELOG.md
+
+          cat CHANGELOG.md
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ needs.check-merge.outputs.version }}
+          name: BigO ${{ needs.check-merge.outputs.version }}
+          body_path: CHANGELOG.md
+          draft: false
+          prerelease: ${{ contains(needs.check-merge.outputs.version, 'alpha') || contains(needs.check-merge.outputs.version, 'beta') || contains(needs.check-merge.outputs.version, 'rc') }}
+          files: |
+            dist/bigo-linux-amd64
+            dist/bigo-linux-arm64
+            dist/bigo-darwin-amd64
+            dist/bigo-darwin-arm64
+            dist/bigo-windows-amd64.exe
+            dist/checksums.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Update latest tag
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git tag -fa latest -m "Latest release"
+          git push origin latest --force

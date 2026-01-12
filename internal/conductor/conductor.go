@@ -25,6 +25,7 @@ type Worker interface {
 	Execute(ctx context.Context, task *types.Task) (*types.ExecutionResult, error)
 	Available() bool
 	Backend() types.Backend
+	CheckQuota(ctx context.Context) error
 }
 
 // NewConductor creates a new conductor instance

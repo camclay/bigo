@@ -86,6 +86,11 @@ func (w *OllamaWorker) Execute(ctx context.Context, task *types.Task) (*types.Ex
 	}, nil
 }
 
+// CheckQuota verifies if the worker has sufficient quota (always true for Ollama)
+func (w *OllamaWorker) CheckQuota(ctx context.Context) error {
+	return nil
+}
+
 // Available returns whether the worker is available
 func (w *OllamaWorker) Available() bool {
 	return w.available

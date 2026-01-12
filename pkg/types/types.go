@@ -40,6 +40,8 @@ const (
 	BackendOllamaFast   Backend = "ollama:fast"
 	BackendOllama       Backend = "ollama:default"
 	BackendOllamaReason Backend = "ollama:reasoning"
+	BackendGeminiFlash  Backend = "gemini:flash"
+	BackendGeminiPro    Backend = "gemini:pro"
 )
 
 // TaskStatus represents the lifecycle state of a task
