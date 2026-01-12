@@ -173,5 +173,5 @@ func WriteDefault(path string) error {
 
 `)
 
-	return os.WriteFile(path, append(header, data...), 0644)
+	return os.WriteFile(path, append(header, data...), 0600)
 }

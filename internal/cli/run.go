@@ -52,7 +52,7 @@ func runTask(cmd *cobra.Command, args []string) error {
 
 	ledgerPath := filepath.Join(cwd, ".bigo", "ledger.db")
 	var l *ledger.Ledger
-	if _, err := os.Stat(ledgerPath); err == nil {
+	if _, err = os.Stat(ledgerPath); err == nil {
 		l, err = ledger.Open(ledgerPath)
 		if err != nil {
 			return fmt.Errorf("failed to open ledger: %w", err)
@@ -71,15 +71,16 @@ func runTask(cmd *cobra.Command, args []string) error {
 			model = m
 			break
 		}
-		
+
 		if model != "" {
 			w := workers.NewClaudeWorker("quota-check", workers.ClaudeConfig{
 				Model:   model,
 				Backend: types.BackendClaudeSonnet, // Dummy backend for check
 			})
-			fmt.Printf("Checking Claude quota (%s)...\n", model)
-			if err := w.CheckQuota(ctx); err != nil {
-				fmt.Printf("⚠ Claude quota check failed: %v\n  Disabling Claude backend.\n", err)
+							fmt.Printf("Checking Claude quota (%s)...\n", model)
+							if err = w.CheckQuota(ctx); err != nil {
+								fmt.Printf("⚠ Claude quota check failed: %v\n  Disabling Claude backend.\n", err)
+			
 				cfg.Workers.Claude.Enabled = false
 			}
 		}
@@ -100,9 +101,10 @@ func runTask(cmd *cobra.Command, args []string) error {
 				Model:   model,
 				Backend: types.BackendGeminiFlash, // Dummy backend for check
 			})
-			fmt.Printf("Checking Gemini quota (%s)...\n", model)
-			if err := w.CheckQuota(ctx); err != nil {
-				fmt.Printf("⚠ Gemini quota check failed: %v\n  Disabling Gemini backend.\n", err)
+							fmt.Printf("Checking Gemini quota (%s)...\n", model)
+							if err = w.CheckQuota(ctx); err != nil {
+								fmt.Printf("⚠ Gemini quota check failed: %v\n  Disabling Gemini backend.\n", err)
+			
 				cfg.Workers.Gemini.Enabled = false
 			}
 		}

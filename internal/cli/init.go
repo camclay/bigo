@@ -26,12 +26,12 @@ func runInit(cmd *cobra.Command, args []string) error {
 	bigoDir := filepath.Join(cwd, ".bigo")
 
 	// Check if already initialized
-	if _, err := os.Stat(bigoDir); err == nil {
+	if _, err = os.Stat(bigoDir); err == nil {
 		return fmt.Errorf("BigO already initialized in this directory")
 	}
 
 	// Create .bigo directory
-	if err := os.MkdirAll(bigoDir, 0755); err != nil {
+	if err = os.MkdirAll(bigoDir, 0755); err != nil {
 		return fmt.Errorf("failed to create .bigo directory: %w", err)
 	}
 

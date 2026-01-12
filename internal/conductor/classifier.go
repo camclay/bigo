@@ -15,9 +15,9 @@ type Classifier struct {
 
 // Pattern represents a classification pattern
 type Pattern struct {
-	Name    string
-	Regex   *regexp.Regexp
-	Weight  float64
+	Name   string
+	Regex  *regexp.Regexp
+	Weight float64
 }
 
 // NewClassifier creates a new task classifier with default patterns

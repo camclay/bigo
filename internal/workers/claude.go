@@ -65,8 +65,8 @@ func (w *ClaudeWorker) Execute(ctx context.Context, task *types.Task) (*types.Ex
 	defer cancel()
 
 	args := []string{
-		"--print",           // Print response only
-		"--model", w.model,  // Specify model
+		"--print",          // Print response only
+		"--model", w.model, // Specify model
 	}
 
 	cmd := exec.CommandContext(ctx, w.cliPath, args...)
@@ -124,17 +124,17 @@ func (w *ClaudeWorker) CheckQuota(ctx context.Context) error {
 	// We don't care about the output, just the exit code
 	if output, err := cmd.CombinedOutput(); err != nil {
 		outputStr := string(output)
-		if strings.Contains(strings.ToLower(outputStr), "credit") || 
-		   strings.Contains(strings.ToLower(outputStr), "quota") || 
-		   strings.Contains(strings.ToLower(outputStr), "balance") ||
-		   strings.Contains(strings.ToLower(outputStr), "payment") {
+		if strings.Contains(strings.ToLower(outputStr), "credit") ||
+			strings.Contains(strings.ToLower(outputStr), "quota") ||
+			strings.Contains(strings.ToLower(outputStr), "balance") ||
+			strings.Contains(strings.ToLower(outputStr), "payment") {
 			return fmt.Errorf("quota exceeded or payment required: %v", err)
 		}
 		// Fallback: any error might indicate an issue, but we want to be specific if possible.
 		// For now, if a simple "hi" fails, we assume it's unusable.
 		return fmt.Errorf("quota check failed: %v - %s", err, outputStr)
 	}
-	
+
 	return nil
 }
 
@@ -182,7 +182,7 @@ func estimateCost(model string, inputLen, outputLen int) float64 {
 		inputPrice = 0.003  // $3/1M input
 		outputPrice = 0.015 // $15/1M output
 	case strings.Contains(model, "haiku"):
-		inputPrice = 0.00025 // $0.25/1M input
+		inputPrice = 0.00025  // $0.25/1M input
 		outputPrice = 0.00125 // $1.25/1M output
 	default:
 		inputPrice = 0.003

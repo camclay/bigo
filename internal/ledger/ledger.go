@@ -16,16 +16,16 @@ type Ledger struct {
 
 // Stats holds aggregated statistics from the ledger
 type Stats struct {
-	TotalTasks        int
-	PendingTasks      int
-	CompletedTasks    int
-	TotalExecutions   int
-	ClaudeTasks       int
-	ClaudeCost        float64
-	OllamaTasks       int
-	OllamaCost        float64
-	EstimatedSavings  float64
-	SavingsPercent    float64
+	TotalTasks       int
+	PendingTasks     int
+	CompletedTasks   int
+	TotalExecutions  int
+	ClaudeTasks      int
+	ClaudeCost       float64
+	OllamaTasks      int
+	OllamaCost       float64
+	EstimatedSavings float64
+	SavingsPercent   float64
 }
 
 // Init creates a new ledger database with the schema

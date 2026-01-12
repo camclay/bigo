@@ -85,14 +85,14 @@ func (w *GeminiWorker) Execute(ctx context.Context, task *types.Task) (*types.Ex
 		// Fallback estimate
 		tokensUsed = estimateTokens(len(prompt) + len(output))
 	}
-	
+
 	return &types.ExecutionResult{
 		TaskID:     task.ID,
 		Backend:    w.backend,
 		Success:    true,
 		Output:     output,
 		TokensUsed: tokensUsed,
-		CostUSD:    w.estimateCost(tokensUsed), 
+		CostUSD:    w.estimateCost(tokensUsed),
 		DurationMs: duration.Milliseconds(),
 	}, nil
 }
@@ -108,14 +108,14 @@ func (w *GeminiWorker) CheckQuota(ctx context.Context) error {
 		// If we get an error, check if it looks like a quota error
 		// The generate method wraps errors, so we look at the string
 		errStr := strings.ToLower(err.Error())
-		if strings.Contains(errStr, "429") || 
-		   strings.Contains(errStr, "quota") || 
-		   strings.Contains(errStr, "resource exhausted") {
+		if strings.Contains(errStr, "429") ||
+			strings.Contains(errStr, "quota") ||
+			strings.Contains(errStr, "resource exhausted") {
 			return fmt.Errorf("quota exceeded: %w", err)
 		}
 		return fmt.Errorf("quota check failed: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -155,7 +155,7 @@ type geminiPart struct {
 
 // geminiResponse represents a response from the Gemini API
 type geminiResponse struct {
-	Candidates    []geminiCandidate  `json:"candidates"`
+	Candidates    []geminiCandidate   `json:"candidates"`
 	UsageMetadata geminiUsageMetadata `json:"usageMetadata"`
 }
 
@@ -164,9 +164,9 @@ type geminiCandidate struct {
 }
 
 type geminiUsageMetadata struct {
-	PromptTokenCount int `json:"promptTokenCount"`
+	PromptTokenCount     int `json:"promptTokenCount"`
 	CandidatesTokenCount int `json:"candidatesTokenCount"`
-	TotalTokenCount int `json:"totalTokenCount"`
+	TotalTokenCount      int `json:"totalTokenCount"`
 }
 
 func (w *GeminiWorker) generate(ctx context.Context, prompt string) (*geminiResponse, error) {
@@ -200,7 +200,10 @@ func (w *GeminiWorker) generate(ctx context.Context, prompt string) (*geminiResp
 	defer resp.Body.Close()
 
 	if resp.StatusCode != http.StatusOK {
-		bodyBytes, _ := io.ReadAll(resp.Body)
+		bodyBytes, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return nil, fmt.Errorf("Gemini returned status %d (failed to read body: %w)", resp.StatusCode, err)
+		}
 		return nil, fmt.Errorf("Gemini returned status %d: %s", resp.StatusCode, string(bodyBytes))
 	}
 
@@ -216,15 +219,15 @@ func (w *GeminiWorker) estimateCost(tokens int) float64 {
 	// Pricing (approximate, e.g., for Gemini 1.5 Flash/Pro)
 	// Flash is very cheap, Pro is moderate.
 	// This is a rough estimation.
-	
+
 	// Flash: ~$0.35 / 1M tokens (input), ~$1.05 / 1M tokens (output)
 	// Pro: ~$3.50 / 1M tokens (input), ~$10.50 / 1M tokens (output)
-	
+
 	// Simplify to an average per token
 	ratePer1M := 0.5 // Default to Flash-ish
 	if w.backend == types.BackendGeminiPro {
 		ratePer1M = 7.0
 	}
-	
+
 	return float64(tokens) * ratePer1M / 1_000_000
 }

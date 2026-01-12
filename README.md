@@ -1,8 +1,8 @@
 # BigO
 
-**Unified Claude + Ollama Agent Orchestrator**
+**Unified Claude + Gemini + Ollama Agent Orchestrator**
 
-BigO intelligently routes coding tasks to the most cost-effective AI backend. Simple tasks go to free local Ollama models, while complex work uses Claude's advanced reasoning. Save money without sacrificing quality.
+BigO intelligently routes coding tasks to the most cost-effective AI backend. Simple tasks go to free local Ollama models, while complex work uses Claude's advanced reasoning or Gemini's large context window. Save money without sacrificing quality.
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -16,18 +16,18 @@ BigO intelligently routes coding tasks to the most cost-effective AI backend. Si
          ┌────────────────────┼────────────────────┐
          ▼                    ▼                    ▼
 ┌─────────────────┐  ┌─────────────────┐  ┌─────────────────┐
-│  Claude Tier    │  │   Ollama Tier   │  │  Validator Pool │
+│  Claude/Gemini  │  │   Ollama Tier   │  │  Validator Pool │
 │                 │  │                 │  │                 │
-│ • Opus (P0)     │  │ • phi3 (fast)   │  │ • Blind review  │
+│ • Opus/Pro (P0) │  │ • phi3 (fast)   │  │ • Blind review  │
 │ • Sonnet (P1-2) │  │ • qwen3 (default│  │ • Multi-model   │
-│ • Haiku (P3-4)  │  │ • Remote server │  │                 │
+│ • Haiku/Flash   │  │ • Remote server │  │                 │
 └─────────────────┘  └─────────────────┘  └─────────────────┘
 ```
 
 ## Features
 
 - **Smart Task Classification**: Automatically categorizes tasks by complexity (TRIVIAL → CRITICAL)
-- **Cost Optimization**: Routes simple tasks to free Ollama, complex ones to Claude
+- **Cost Optimization**: Routes simple tasks to free Ollama, complex ones to Claude or Gemini
 - **Remote Ollama Support**: Run Ollama on a dedicated GPU server
 - **Task Persistence**: SQLite ledger for crash recovery and analytics
 - **Cost Tracking**: See exactly how much you're saving
@@ -39,6 +39,7 @@ BigO intelligently routes coding tasks to the most cost-effective AI backend. Si
 - Go 1.21+
 - [Ollama](https://ollama.ai) (local or remote)
 - [Claude CLI](https://docs.anthropic.com/claude-code) (for Claude backends)
+- Gemini API Key (optional, for Gemini backends)
 
 ### Installation
 
@@ -122,7 +123,7 @@ BigO is designed for a common setup where you have:
 │          │           │         │  │  • phi3        │  │
 │          ▼           │         │  │  • qwen3       │  │
 │  ┌────────────────┐  │         │  │  • deepseek    │  │
-│  │  Claude CLI    │  │         │  └────────────────┘  │
+│  │  Claude/Gemini │  │         │  └────────────────┘  │
 │  └────────────────┘  │         │                      │
 └──────────────────────┘         └──────────────────────┘
 ```
@@ -133,9 +134,9 @@ BigO is designed for a common setup where you have:
 |------|------------|---------|----------|
 | T0 | TRIVIAL | Ollama (fast) | Typos, formatting, comments |
 | T1 | SIMPLE | Ollama (default) | Add function, fix obvious bug |
-| T2 | STANDARD | Claude Sonnet | New feature, refactoring |
-| T3 | COMPLEX | Claude Sonnet + Opus | Architecture, multi-file |
-| T4 | CRITICAL | Claude Opus | Security, auth, payments |
+| T2 | STANDARD | Claude Sonnet / Gemini Flash | New feature, refactoring |
+| T3 | COMPLEX | Claude Sonnet / Gemini Pro | Architecture, multi-file |
+| T4 | CRITICAL | Claude Opus / Gemini Pro | Security, auth, payments |
 
 ## Configuration
 
@@ -160,6 +161,13 @@ workers:
     cost_limits:
       daily_usd: 50.0
       per_task_usd: 5.0
+
+  gemini:
+    enabled: true
+    api_key: "YOUR_GEMINI_API_KEY"
+    models:
+      flash: gemini-1.5-flash
+      pro: gemini-1.5-pro
 
   ollama:
     enabled: true
@@ -225,9 +233,9 @@ Tasks:      47 total (2 pending, 45 completed)
 Executions: 52 total
 ───────────────────────────────────────
 Cost Breakdown:
-  Claude:   $1.2340 (12 tasks)
-  Ollama:   $0.0000 (35 tasks)
-  Savings:  $1.7500 (58.6%)
+  Claude/Gemini: $1.2340 (12 tasks)
+  Ollama:        $0.0000 (35 tasks)
+  Savings:       $1.7500 (58.6%)
 ═══════════════════════════════════════
 ```
 
